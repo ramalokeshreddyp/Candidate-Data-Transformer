@@ -1,0 +1,91 @@
+{
+  "full_name": "Asha Verma",
+  "primary_email": "asha.verma@gmail.com",
+  "phone": "+919876543210",
+  "skills": [
+    "JavaScript",
+    "Python",
+    "Go"
+  ],
+  "overall_confidence": 0.736,
+  "provenance": [
+    {
+      "field": "full_name",
+      "source": "recruiter_csv",
+      "method": "direct",
+      "confidence": 0.85
+    },
+    {
+      "field": "full_name",
+      "source": "ats_json",
+      "method": "discarded:direct",
+      "confidence": 0.85
+    },
+    {
+      "field": "full_name",
+      "source": "github",
+      "method": "discarded:direct",
+      "confidence": 0.6
+    },
+    {
+      "field": "headline",
+      "source": "github",
+      "method": "direct",
+      "confidence": 0.6
+    },
+    {
+      "field": "emails",
+      "source": "recruiter_csv",
+      "method": "direct",
+      "confidence": 0.9
+    },
+    {
+      "field": "emails",
+      "source": "ats_json",
+      "method": "direct",
+      "confidence": 0.85
+    },
+    {
+      "field": "phones",
+      "source": "recruiter_csv",
+      "method": "normalized",
+      "confidence": 0.9
+    },
+    {
+      "field": "skills",
+      "source": "github",
+      "method": "inferred-from-repos",
+      "confidence": 0.7
+    },
+    {
+      "field": "skills",
+      "source": "github",
+      "method": "inferred-from-repos",
+      "confidence": 0.7
+    },
+    {
+      "field": "skills",
+      "source": "github",
+      "method": "inferred-from-repos",
+      "confidence": 0.7
+    },
+    {
+      "field": "experience",
+      "source": "ats_json",
+      "method": "direct",
+      "confidence": 0.6
+    },
+    {
+      "field": "experience",
+      "source": "recruiter_csv",
+      "method": "direct",
+      "confidence": 0.4
+    },
+    {
+      "field": "links",
+      "source": "github",
+      "method": "direct",
+      "confidence": 0.9
+    }
+  ]
+}

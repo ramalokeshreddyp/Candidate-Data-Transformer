@@ -1,0 +1,138 @@
+{
+  "candidate_id": "cand_001",
+  "full_name": "Asha Verma",
+  "emails": [
+    "asha.verma@gmail.com",
+    "asha.v.work@innover.com"
+  ],
+  "phones": [
+    "+919876543210"
+  ],
+  "location": null,
+  "links": {
+    "github": "https://github.com/ashaverma-dev"
+  },
+  "headline": "Backend engineer. Python, distributed systems, occasionally Rust.",
+  "years_experience": null,
+  "skills": [
+    {
+      "name": "Python",
+      "confidence": 0.7,
+      "sources": [
+        "github"
+      ]
+    },
+    {
+      "name": "Go",
+      "confidence": 0.7,
+      "sources": [
+        "github"
+      ]
+    },
+    {
+      "name": "JavaScript",
+      "confidence": 0.7,
+      "sources": [
+        "github"
+      ]
+    }
+  ],
+  "experience": [
+    {
+      "company": "Innover Systems Pvt Ltd",
+      "title": "Sr. Backend Engineer",
+      "start": null,
+      "end": null,
+      "summary": ""
+    },
+    {
+      "company": "Innover Systems",
+      "title": "Backend Engineer",
+      "start": null,
+      "end": null,
+      "summary": ""
+    }
+  ],
+  "education": [],
+  "provenance": [
+    {
+      "field": "full_name",
+      "source": "recruiter_csv",
+      "method": "direct",
+      "confidence": 0.85
+    },
+    {
+      "field": "full_name",
+      "source": "ats_json",
+      "method": "discarded:direct",
+      "confidence": 0.85
+    },
+    {
+      "field": "full_name",
+      "source": "github",
+      "method": "discarded:direct",
+      "confidence": 0.6
+    },
+    {
+      "field": "headline",
+      "source": "github",
+      "method": "direct",
+      "confidence": 0.6
+    },
+    {
+      "field": "emails",
+      "source": "recruiter_csv",
+      "method": "direct",
+      "confidence": 0.9
+    },
+    {
+      "field": "emails",
+      "source": "ats_json",
+      "method": "direct",
+      "confidence": 0.85
+    },
+    {
+      "field": "phones",
+      "source": "recruiter_csv",
+      "method": "normalized",
+      "confidence": 0.9
+    },
+    {
+      "field": "skills",
+      "source": "github",
+      "method": "inferred-from-repos",
+      "confidence": 0.7
+    },
+    {
+      "field": "skills",
+      "source": "github",
+      "method": "inferred-from-repos",
+      "confidence": 0.7
+    },
+    {
+      "field": "skills",
+      "source": "github",
+      "method": "inferred-from-repos",
+      "confidence": 0.7
+    },
+    {
+      "field": "experience",
+      "source": "ats_json",
+      "method": "direct",
+      "confidence": 0.6
+    },
+    {
+      "field": "experience",
+      "source": "recruiter_csv",
+      "method": "direct",
+      "confidence": 0.4
+    },
+    {
+      "field": "links",
+      "source": "github",
+      "method": "direct",
+      "confidence": 0.9
+    }
+  ],
+  "overall_confidence": 0.736
+}

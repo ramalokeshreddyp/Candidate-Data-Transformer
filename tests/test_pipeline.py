@@ -128,6 +128,63 @@ def test_validation_detects_malformed_experience_date():
     print("PASS: validate_default_schema detects malformed experience date format")
 
 
+def test_pipeline_end_to_end():
+    from candidate_transformer.pipeline import run_pipeline
+    
+    sources = {
+        "recruiter_csv": "name,email,phone,current_company,title\nAlice Cooper,alice@cooper.com,9876543210,AliceCorp,Tech Lead",
+        "ats_json": {
+            "candidateName": "Alice Cooper",
+            "contactEmail": "alice.work@cooper.com",
+            "employer": "AliceCorp Ltd",
+            "currentTitle": "Principal Tech Lead"
+        },
+        "github_profile": {
+            "login": "alice-cooper",
+            "name": "A. Cooper",
+            "bio": "Tech lead. Python, Docker."
+        },
+        "github_repos": [
+            {"language": "Python"},
+            {"language": "Go"}
+        ]
+    }
+    
+    # 1. Test Default Schema end-to-end
+    result = run_pipeline("cand_999", sources)
+    
+    assert result["candidate_id"] == "cand_999"
+    assert result["full_name"] == "Alice Cooper"
+    assert set(result["emails"]) == {"alice@cooper.com", "alice.work@cooper.com"}
+    assert result["phones"] == ["+919876543210"]
+    assert result["headline"] == "Tech lead. Python, Docker."
+    
+    skills = {s["name"] for s in result["skills"]}
+    assert "Python" in skills
+    assert "Go" in skills
+    assert len(result["provenance"]) > 0
+    assert "_validation_errors" not in result
+    
+    # 2. Test Custom Projection config end-to-end
+    custom_config = {
+        "fields": [
+            { "path": "full_name", "type": "string", "required": True },
+            { "path": "primary_email", "from": "emails[0]", "type": "string", "required": True },
+            { "path": "first_skill", "from": "skills[0].name", "type": "string" }
+        ],
+        "include_confidence": True,
+        "on_missing": "null"
+    }
+    projected = run_pipeline("cand_999", sources, custom_config)
+    assert projected["full_name"] == "Alice Cooper"
+    assert projected["primary_email"] in {"alice@cooper.com", "alice.work@cooper.com"}
+    assert "first_skill" in projected
+    assert "overall_confidence" in projected
+    assert "_validation_errors" not in projected
+    
+    print("PASS: end-to-end pipeline run (default & custom projection)")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in list(globals().items()) if k.startswith("test_")]
     failed = 0
@@ -138,4 +195,5 @@ if __name__ == "__main__":
             print(f"FAIL: {t.__name__}: {e}")
             failed += 1
     print(f"\n{len(tests) - failed}/{len(tests)} tests passed")
+
 

@@ -16,13 +16,6 @@
   "years_experience": null,
   "skills": [
     {
-      "name": "Python",
-      "confidence": 0.7,
-      "sources": [
-        "github"
-      ]
-    },
-    {
       "name": "Go",
       "confidence": 0.7,
       "sources": [
@@ -31,6 +24,13 @@
     },
     {
       "name": "JavaScript",
+      "confidence": 0.7,
+      "sources": [
+        "github"
+      ]
+    },
+    {
+      "name": "Python",
       "confidence": 0.7,
       "sources": [
         "github"

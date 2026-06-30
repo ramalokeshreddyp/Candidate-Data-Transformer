@@ -100,6 +100,34 @@ def test_github_skills_get_lower_confidence_than_declared_skills():
     print("PASS: GitHub-inferred skills are discounted relative to declared skills")
 
 
+def test_validation_detects_malformed_location_country():
+    from candidate_transformer.core.validate import validate_default_schema
+    profile = {
+        "candidate_id": "c1",
+        "location": {"city": "Bangalore", "country": "india"}  # lowercase, should be 2 uppercase chars
+    }
+    errors = validate_default_schema(profile)
+    assert any("country" in err for err in errors), f"expected country error, got: {errors}"
+    print("PASS: validate_default_schema detects malformed location country")
+
+
+def test_validation_detects_malformed_experience_date():
+    from candidate_transformer.core.validate import validate_default_schema
+    profile = {
+        "candidate_id": "c1",
+        "experience": [{
+            "company": "X",
+            "title": "Y",
+            "start": "2022/01",  # wrong format, should be YYYY-MM
+            "end": None,
+            "summary": ""
+        }]
+    }
+    errors = validate_default_schema(profile)
+    assert any("start" in err for err in errors), f"expected start date error, got: {errors}"
+    print("PASS: validate_default_schema detects malformed experience date format")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in list(globals().items()) if k.startswith("test_")]
     failed = 0
@@ -110,3 +138,4 @@ if __name__ == "__main__":
             print(f"FAIL: {t.__name__}: {e}")
             failed += 1
     print(f"\n{len(tests) - failed}/{len(tests)} tests passed")
+

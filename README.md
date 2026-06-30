@@ -111,7 +111,9 @@ eightfold-transformer/
 ├── architecture.md         # High-level architecture, design decisions & priors
 ├── projectdocumentation.md  # Detailed module breakdown, flowcharts & integration specs
 ├── pipeline.py             # Root-level CLI entry point wrapper
+├── Rama_Lokesh_Reddy_Penumallu_rlpreddy565@gmail.com_Eightfold.pdf # Technical Design Document (Step 1)
 ├── candidate_transformer/  # Main package
+
 │   ├── __init__.py
 │   ├── pipeline.py         # Orchestrator logic (run_pipeline, CLI parser main)
 │   ├── core/               # Core merging and projection engine

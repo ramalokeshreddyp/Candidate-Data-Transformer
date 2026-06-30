@@ -1,17 +1,13 @@
 """
-A few targeted tests — not exhaustive coverage, but each one exercises a
-decision I had to actually make while building this, which is what the
-assignment says it's evaluating.
-
-Run with: python -m pytest test_pipeline.py -v
-(or just: python test_pipeline.py, since these don't need pytest features)
+A suite of targeted unit tests verifying merge, conflict resolution,
+normalization, validation, and projection.
 """
 
-from schema import FieldValue, SourceType
-from merge import merge_sources
-from project import project, project_default_schema
-from extractors import extract_recruiter_csv, extract_github_profile
-from normalize import normalize_phone, normalize_date
+from candidate_transformer.core.schema import FieldValue, SourceType
+from candidate_transformer.core.merge import merge_sources
+from candidate_transformer.core.project import project, project_default_schema
+from candidate_transformer.extractors import extract_recruiter_csv, extract_github_profile
+from candidate_transformer.utils.normalize import normalize_phone, normalize_date
 
 
 def test_conflict_resolution_picks_highest_confidence():

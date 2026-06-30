@@ -35,10 +35,10 @@ graph TD
     end
 
     %% Parsing & Extraction
-    subgraph Extraction [Extraction Layer - extractors.py]
-        Ex_CSV["extract_recruiter_csv()"]:::logicStyle
-        Ex_ATS["extract_ats_json()"]:::logicStyle
-        Ex_GH["extract_github_profile()"]:::logicStyle
+    subgraph Extraction [Extraction Layer - candidate_transformer/extractors/]
+        Ex_CSV["csv_extractor.py"]:::logicStyle
+        Ex_ATS["ats_extractor.py"]:::logicStyle
+        Ex_GH["github_extractor.py"]:::logicStyle
     end
     
     CSV --> Ex_CSV
@@ -54,7 +54,7 @@ graph TD
     Ex_GH -->|Emits FieldValues| FV_List
 
     %% Merge Engine
-    subgraph MergeEngine [Merge Engine - merge.py]
+    subgraph MergeEngine [Merge Engine - candidate_transformer/core/merge.py]
         ME["merge_sources()"]:::logicStyle
         subgraph Policies [Resolution Policies]
             SV["Single-Value: Confidence Winner / Deterministic Tie-Break"]
@@ -72,8 +72,8 @@ graph TD
     
     %% Projection & Validation
     subgraph ProjectionAndValidation [Projection & Validation Layer]
-        PL["project() or project_default_schema()"]:::logicStyle
-        VL["validate() & validate_custom_projection()"]:::logicStyle
+        PL["project() or project_default_schema() in core/project.py"]:::logicStyle
+        VL["validate() & validate_custom_projection() in core/validate.py"]:::logicStyle
         Config["Projection Configuration JSON<br/>(Optional Custom Config)"]:::sourceStyle
     end
     
@@ -99,7 +99,7 @@ A common anti-pattern in data integration is assigning a single trust score to a
 Therefore, our architecture evaluates confidence **per field, per source**.
 
 ### Field-Source Confidence Prior Matrix
-The system uses base confidence priors (`FIELD_SOURCE_PRIORS` in [schema.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/schema.py)) as initial trust values:
+The system uses base confidence priors (`FIELD_SOURCE_PRIORS` in [schema.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/schema.py)) as initial trust values:
 
 | Field Name | Recruiter CSV | ATS JSON | GitHub Profile/Repos | Resume (Future) | LinkedIn (Future) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -122,7 +122,7 @@ Whenever a value is **inferred** rather than directly declared, its confidence p
 
 ## ⚙️ Conflict Resolution & Merging Rules
 
-When multiple values are extracted for a field, the merge engine ([merge.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/merge.py)) decides how they are reconciled using specific policies:
+When multiple values are extracted for a field, the merge engine ([merge.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/merge.py)) decides how they are reconciled using specific policies:
 
 ### 1. Single-Value Fields (`full_name`, `headline`, `location`)
 * **Policy**: The value with the highest confidence wins.

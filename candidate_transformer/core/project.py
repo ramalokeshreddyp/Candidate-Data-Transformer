@@ -10,7 +10,7 @@ the canonical profile is computed once and projected many times, cheaply.
 
 import re
 from typing import Any
-from normalize import normalize_phone, canonicalize_skill
+from ..utils.normalize import normalize_phone, canonicalize_skill
 
 
 def _get_path(profile_dict: dict, path: str) -> Any:

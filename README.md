@@ -2,7 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Dependencies](https://img.shields.io/badge/dependencies-zero--external-success.svg?style=for-the-badge)](https://docs.python.org/3/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg?style=for-the-badge)](file:///c:/Users/lokes/Desktop/eightfold-transformer/test_pipeline.py)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg?style=for-the-badge)](file:///c:/Users/lokes/Desktop/eightfold-transformer/tests/test_pipeline.py)
 
 Built for the **Eightfold Engineering Intern (Jul–Dec 2026)** assignment, this project is a robust, lightweight, and deterministic pipeline that ingests candidate profile data from inconsistent, multi-source inputs (e.g., recruiter CSV exports, ATS JSON blobs, GitHub public profiles) and transforms them into a single, clean, canonical candidate profile.
 
@@ -54,13 +54,16 @@ The system runs a unidirectional pipeline: **Parse ➔ Extract ➔ Merge ➔ Pro
 sequenceDiagram
     autonumber
     actor User
-    participant Pipeline as pipeline.py
-    participant Extractors as extractors.py
-    participant MergeEngine as merge.py
-    participant ProjectLayer as project.py
-    participant Validator as validate.py
+    participant PipelineWrapper as pipeline.py
+    participant Pipeline as candidate_transformer/pipeline.py
+    participant Extractors as candidate_transformer/extractors/
+    participant MergeEngine as candidate_transformer/core/merge.py
+    participant ProjectLayer as candidate_transformer/core/project.py
+    participant Validator as candidate_transformer/core/validate.py
 
-    User->>Pipeline: Exec CLI command (sources + config)
+    User->>PipelineWrapper: Exec CLI command (sources + config)
+    activate PipelineWrapper
+    PipelineWrapper->>Pipeline: main() / run_pipeline()
     activate Pipeline
     Pipeline->>Extractors: Extract raw sources (CSV, ATS JSON, GitHub)
     activate Extractors
@@ -90,30 +93,45 @@ sequenceDiagram
         Validator->>Pipeline: Return Errors List
         deactivate Validator
     end
-    Pipeline->>User: Output JSON (stdout or --out file)
+    Pipeline->>PipelineWrapper: Return JSON output
     deactivate Pipeline
+    PipelineWrapper->>User: Output JSON (stdout or --out file)
+    deactivate PipelineWrapper
 ```
 
 ---
 
 ## 📂 Code Structure & Organization
 
-The codebase is organized into small, focused, single-responsibility modules:
+The codebase is organized into a clean, modular package structure to separate concerns and support scalability:
 
 ```bash
 eightfold-transformer/
 ├── README.md               # Visual landing page & quickstart
 ├── architecture.md         # High-level architecture, design decisions & priors
 ├── projectdocumentation.md  # Detailed module breakdown, flowcharts & integration specs
-├── pipeline.py             # CLI entrypoint & pipeline orchestrator
-├── schema.py               # Data structures, provenance models & confidence scores
-├── extractors.py           # Parsing functions mapping raw sources to FieldValues
-├── merge.py                # Conflict resolution & confidence aggregation logic
-├── normalize.py            # Field cleanups (emails, phones, dates, and skills)
-├── project.py              # Configuration-driven projection engine
-├── validate.py             # Pre-output schema validation checks
-├── test_pipeline.py        # 8 core validation unit tests
-└── sample_inputs/          # Mock data files for testing
+├── pipeline.py             # Root-level CLI entry point wrapper
+├── candidate_transformer/  # Main package
+│   ├── __init__.py
+│   ├── pipeline.py         # Orchestrator logic (run_pipeline, CLI parser main)
+│   ├── core/               # Core merging and projection engine
+│   │   ├── __init__.py
+│   │   ├── schema.py       # Data structures, provenance models & confidence scores
+│   │   ├── merge.py        # Conflict resolution & confidence aggregation logic
+│   │   ├── project.py      # Configuration-driven projection engine
+│   │   └── validate.py     # Pre-output schema validation checks
+│   ├── extractors/         # Data source extractors (separated by concern)
+│   │   ├── __init__.py     # Exposes extractor functions
+│   │   ├── csv_extractor.py # Extract recruiter CSV data
+│   │   ├── ats_extractor.py # Extract ATS JSON data
+│   │   └── github_extractor.py # Extract GitHub API profile/repo data
+│   └── utils/              # Normalization and helper utilities
+│       ├── __init__.py
+│       └── normalize.py    # Field cleanups (emails, phones, dates, and skills)
+├── tests/                  # Test suite
+│   ├── __init__.py
+│   └── test_pipeline.py    # Core validation unit tests
+└── sample_inputs/          # Test data assets
     ├── ats.json            # Mock ATS JSON export
     ├── recruiter.csv       # Mock Recruiter CSV export
     ├── github_profile.json # Mock GitHub API profile
@@ -187,9 +205,9 @@ python pipeline.py \
 
 A suite of unit tests covers the critical parts of the pipeline's logic (conflict resolution, tie-breaking, schema validation, and normalization).
 
-Run the tests directly:
+Run the tests directly as a Python module:
 ```bash
-python test_pipeline.py
+python -m tests.test_pipeline
 ```
 
 All 8 tests are executed without needing external test frameworks:
@@ -212,4 +230,4 @@ PASS: GitHub-inferred skills are discounted relative to declared skills
 
 For deep dives into design, architecture, and code details, refer to:
 * **[architecture.md](file:///c:/Users/lokes/Desktop/eightfold-transformer/architecture.md)**: Explore the architectural principles, confidence scoring matrices, and the philosophy behind separating internal canonical records from outputs.
-* **[projectdocumentation.md](file:///c:/Users/lokes/Desktop/eightfold-transformer/projectdocumentation.md)**: Explore file-by-file module descriptions, code level workflows, data flow diagrams, trade-off evaluations, and integration guidelines for new sources.
+* **[projectdocumentation.md](file:///c:/Users/lokes/Desktop/eightfold-transformer/projectdocumentation.md)**: Explore package module descriptions, code level workflows, data flow diagrams, trade-off evaluations, and integration guidelines for new sources.

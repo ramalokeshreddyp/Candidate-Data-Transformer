@@ -24,7 +24,7 @@ that absence is itself information, not a bug to paper over.
 
 from collections import defaultdict
 from typing import List
-from schema import FieldValue, ProvenanceEntry, CanonicalProfile
+from .schema import FieldValue, ProvenanceEntry, CanonicalProfile
 
 SOURCE_PRIORITY = ["recruiter_csv", "ats_json", "linkedin", "resume", "github", "recruiter_notes"]
 

@@ -126,61 +126,70 @@ flowchart TD
 
 ```text
 eightfold-transformer/
-|-- README.md
-|-- architecture.md
-|-- projectdocumentation.md
-|-- pipeline.py
-|-- candidate_transformer/
-|   |-- __init__.py
-|   |-- pipeline.py
-|   |-- core/
-|   |   |-- __init__.py
-|   |   |-- schema.py
-|   |   |-- merge.py
-|   |   |-- project.py
-|   |   |-- validate.py
-|   |-- extractors/
-|   |   |-- __init__.py
-|   |   |-- csv_extractor.py
-|   |   |-- ats_extractor.py
-|   |   |-- github_extractor.py
-|   |-- utils/
-|       |-- __init__.py
-|       |-- normalize.py
-|-- sample_inputs/
-|   |-- recruiter.csv
-|   |-- ats.json
-|   |-- github_profile.json
-|   |-- github_repos.json
-|   |-- custom_config.json
-|   |-- output_default.json
-|   |-- output_custom_config.json
-|-- tests/
-    |-- __init__.py
-    |-- test_pipeline.py
+├── README.md                  # Visual landing page & quickstart
+├── architecture.md            # High-level architecture, design decisions & priors
+├── projectdocumentation.md     # Detailed module breakdown, flowcharts & integration specs
+├── pipeline.py                # Root-level CLI entry point wrapper
+├── Rama_Lokesh_Reddy_Penumallu_rlpreddy565@gmail.com_Eightfold.pdf # Step 1 Design Document
+├── candidate_transformer/     # Main package
+│   ├── __init__.py
+│   ├── pipeline.py            # Orchestrator logic (run_pipeline, CLI parser main)
+│   ├── core/                  # Core merging and projection engine
+│   │   ├── __init__.py
+│   │   ├── schema.py          # Data structures, provenance models & confidence scores
+│   │   ├── merge.py           # Conflict resolution & confidence aggregation logic
+│   │   ├── project.py         # Configuration-driven projection engine
+│   │   └── validate.py        # Pre-output schema validation checks
+│   ├── extractors/            # Data source extractors (separated by concern)
+│   │   ├── __init__.py        # Exposes extractor functions
+│   │   ├── csv_extractor.py   # Extract recruiter CSV data
+│   │   ├── ats_extractor.py   # Extract ATS JSON data
+│   │   └── github_extractor.py # Extract GitHub API profile/repo data
+│   └── utils/                 # Normalization and helper utilities
+│       ├── __init__.py
+│       └── normalize.py       # Field cleanups (emails, phones, dates, and skills)
+├── tests/                     # Test suite
+│   ├── __init__.py
+│   └── test_pipeline.py       # Core validation unit and E2E integration tests
+└── sample_inputs/             # Test data assets
+    ├── ats.json               # Mock ATS JSON export
+    ├── recruiter.csv          # Mock Recruiter CSV export
+    ├── github_profile.json    # Mock GitHub API profile
+    ├── github_repos.json      # Mock GitHub repos JSON
+    ├── custom_config.json     # Sample output projection config
+    ├── output_default.json    # Generated output for default schema
+    └── output_custom_config.json # Generated output for custom config
 ```
 
-## Setup and Installation
+---
+
+## 💻 Setup & Installation
+
+Since the project uses only the Python standard library, there are **no dependencies to install**.
 
 ### Prerequisites
+* Python 3.9 or higher. Verify your installation with:
+  ```bash
+  python --version
+  # or
+  python3 --version
+  ```
 
-1. Python 3.9 or newer.
-2. Access to the repository directory.
+### Getting Started
+1. Clone or copy this repository to your local machine:
+   ```bash
+   git clone https://github.com/ramalokeshreddyp/Candidate-Data-Transformer.git
+   cd Candidate-Data-Transformer
+   ```
 
-### Local Setup
+---
 
-```bash
-git clone <your-repo-url>
-cd eightfold-transformer
-python --version
-```
+## 🚀 How to Run
 
-No package installation is required because the project uses only standard library modules.
+The pipeline runs as a CLI tool via `pipeline.py`.
 
-## Run Locally
-
-### Default canonical output
-
+### 1. Default Schema Output
+Run the pipeline using the mock data provided in `sample_inputs/` to generate the default canonical profile structure:
 ```bash
 python pipeline.py \
   --candidate-id cand_001 \
@@ -190,20 +199,7 @@ python pipeline.py \
   --github-repos sample_inputs/github_repos.json
 ```
 
-### Custom output projection
-
-```bash
-python pipeline.py \
-  --candidate-id cand_001 \
-  --recruiter-csv sample_inputs/recruiter.csv \
-  --ats-json sample_inputs/ats.json \
-  --github-profile sample_inputs/github_profile.json \
-  --github-repos sample_inputs/github_repos.json \
-  --config sample_inputs/custom_config.json
-```
-
-### Write output to file
-
+To write the default schema output directly to the required deliverable file:
 ```bash
 python pipeline.py \
   --candidate-id cand_001 \
@@ -214,45 +210,73 @@ python pipeline.py \
   --out sample_inputs/output_default.json
 ```
 
-## Usage Instructions
+### 2. Custom Output Projection (The "Required Twist")
+To shape the output profile dynamically, supply a projection schema using the `--config` flag:
+```bash
+python pipeline.py \
+  --candidate-id cand_001 \
+  --recruiter-csv sample_inputs/recruiter.csv \
+  --ats-json sample_inputs/ats.json \
+  --github-profile sample_inputs/github_profile.json \
+  --github-repos sample_inputs/github_repos.json \
+  --config sample_inputs/custom_config.json
+```
 
-CLI arguments:
+To write the custom configuration output directly to the required deliverable file:
+```bash
+python pipeline.py \
+  --candidate-id cand_001 \
+  --recruiter-csv sample_inputs/recruiter.csv \
+  --ats-json sample_inputs/ats.json \
+  --github-profile sample_inputs/github_profile.json \
+  --github-repos sample_inputs/github_repos.json \
+  --config sample_inputs/custom_config.json \
+  --out sample_inputs/output_custom_config.json
+```
 
-- --candidate-id: Required identifier for the resulting profile.
-- --recruiter-csv: Path to recruiter CSV source.
-- --ats-json: Path to ATS JSON source.
-- --github-profile: Path to GitHub profile JSON source.
-- --github-repos: Path to GitHub repositories JSON source.
-- --config: Optional custom projection config.
-- --out: Optional output JSON file path.
+### Saving Output to File
+Add the `--out <path>` argument to write the JSON results directly to a file:
+```bash
+python pipeline.py \
+  --candidate-id cand_001 \
+  --recruiter-csv sample_inputs/recruiter.csv \
+  --out output.json
+```
 
-Minimum source coverage in this implementation:
+---
 
-1. Structured: Recruiter CSV and ATS JSON.
-2. Unstructured: GitHub profile plus repositories.
+## 🧪 Running Tests
 
-## Validation and Testing
+A suite of unit tests covers the critical parts of the pipeline's logic (conflict resolution, tie-breaking, schema validation, and normalization).
 
-Run test suite:
-
+Run the tests directly as a Python module:
 ```bash
 python -m tests.test_pipeline
 ```
 
-Current status:
+All 13 tests are executed successfully without needing external test frameworks:
+```text
+PASS: conflict resolution picks highest confidence, records loser
+PASS: ties resolved deterministically by source priority
+PASS: multi-value fields union correctly instead of picking one winner
+PASS: garbage CSV produces empty extraction, no crash, no invented data
+PASS: phone normalization handles common formats and rejects junk
+PASS: date normalization covers common formats, refuses to guess on garbage
+PASS: on_missing='error' surfaces missing required fields loudly
+PASS: custom projection accepts E.164 normalize token
+PASS: default projection emits fixed links shape
+PASS: GitHub-inferred skills are discounted relative to declared skills
+PASS: validate_default_schema detects malformed location country
+PASS: validate_default_schema detects malformed experience date format
+PASS: end-to-end pipeline run (default & custom projection)
 
-1. 13 of 13 tests passing.
-2. Includes end-to-end tests for default schema and custom projection.
-3. Includes regression tests for E.164 config token handling and fixed links shape.
+13/13 tests passed
+```
 
-## Documentation Map
+---
 
-- architecture.md: high-level architecture, merge policy, confidence model, and trade-offs.
-- projectdocumentation.md: module-level implementation details, integration contracts, and execution internals.
+## 🔗 Project Documentation Links
 
-## Assignment Artifacts
-
-1. One-page design PDF for Step 1.
-2. Runnable codebase for Step 2.
-3. Sample outputs in sample_inputs/output_default.json and sample_inputs/output_custom_config.json.
-4. Automated tests in tests/test_pipeline.py.
+For deep dives into design, architecture, and code details, refer to:
+* **[architecture.md](file:///c:/Users/lokes/Desktop/eightfold-transformer/architecture.md)**: Explore the architectural principles, confidence scoring matrices, and the philosophy behind separating internal canonical records from outputs.
+* **[projectdocumentation.md](file:///c:/Users/lokes/Desktop/eightfold-transformer/projectdocumentation.md)**: Explore package module descriptions, code level workflows, data flow diagrams, trade-off evaluations, and integration guidelines for new sources.

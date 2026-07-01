@@ -39,9 +39,10 @@ def _get_path(profile_dict: dict, path: str) -> Any:
 def _apply_normalize(value: Any, normalize: str) -> Any:
     if value is None:
         return None
-    if normalize == "E164":
+    normalize_key = str(normalize).strip().lower().replace(".", "")
+    if normalize_key == "e164":
         return normalize_phone(value) if isinstance(value, str) else value
-    if normalize == "canonical":
+    if normalize_key == "canonical":
         if isinstance(value, list):
             return [canonicalize_skill(v) for v in value]
         return canonicalize_skill(value)
@@ -98,13 +99,19 @@ def project(canonical_profile_dict: dict, config: dict) -> dict:
 def project_default_schema(canonical_profile_dict: dict) -> dict:
     """The full default schema, no projection config applied — used when no
     custom config is supplied."""
+    links = canonical_profile_dict.get("links") or {}
     return {
         "candidate_id": canonical_profile_dict.get("candidate_id"),
         "full_name": canonical_profile_dict.get("full_name"),
         "emails": canonical_profile_dict.get("emails", []),
         "phones": canonical_profile_dict.get("phones", []),
         "location": canonical_profile_dict.get("location"),
-        "links": canonical_profile_dict.get("links", {}),
+        "links": {
+            "linkedin": links.get("linkedin"),
+            "github": links.get("github"),
+            "portfolio": links.get("portfolio"),
+            "other": links.get("other", []),
+        },
         "headline": canonical_profile_dict.get("headline"),
         "years_experience": canonical_profile_dict.get("years_experience"),
         "skills": canonical_profile_dict.get("skills", []),

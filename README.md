@@ -1,178 +1,186 @@
-# 🚀 Multi-Source Candidate Data Transformer
+# Multi-Source Candidate Data Transformer
 
-[![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Dependencies](https://img.shields.io/badge/dependencies-zero--external-success.svg?style=for-the-badge)](https://docs.python.org/3/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg?style=for-the-badge)](file:///c:/Users/lokes/Desktop/eightfold-transformer/tests/test_pipeline.py)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-1f6feb?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Dependencies](https://img.shields.io/badge/Dependencies-Standard%20Library%20Only-0f766e?style=for-the-badge)](https://docs.python.org/3/)
+[![Tests](https://img.shields.io/badge/Tests-13%2F13%20Passing-15803d?style=for-the-badge)](tests/test_pipeline.py)
+[![Design](https://img.shields.io/badge/Design-Deterministic%20and%20Explainable-7c3aed?style=for-the-badge)](architecture.md)
 
-Built for the **Eightfold Engineering Intern (Jul–Dec 2026)** assignment, this project is a robust, lightweight, and deterministic pipeline that ingests candidate profile data from inconsistent, multi-source inputs (e.g., recruiter CSV exports, ATS JSON blobs, GitHub public profiles) and transforms them into a single, clean, canonical candidate profile.
+An end-to-end candidate profile transformation engine built for the Eightfold assignment.
+The pipeline ingests conflicting multi-source candidate data, normalizes it, resolves conflicts deterministically, records provenance per decision, computes confidence, and returns one trustworthy profile.
 
-Every field in the output profile is traceable to its source with computed confidence scores and detailed provenance records, ensuring complete transparency and auditability.
+## Project Overview
 
----
+Recruiting systems receive incomplete and conflicting candidate information from multiple channels. This project solves that by enforcing a strict internal canonical record and a runtime output projection layer.
 
-## 📖 Table of Contents
-1. [Project Overview](#-project-overview)
-2. [Tech Stack](#-tech-stack)
-3. [System Execution Flow](#-system-execution-flow)
-4. [Code Structure & Organization](#-code-structure--organization)
-5. [Setup & Installation](#-setup--installation)
-6. [How to Run](#-how-to-run)
-7. [Running Tests](#-running-tests)
-8. [Pipeline Architecture & Design](#-pipeline-architecture--design)
+Core outcomes:
 
----
+1. Deterministic merge decisions for conflicting values.
+2. Transparent provenance for every selected field.
+3. Confidence scoring per field-source pair.
+4. Config-driven output reshaping without code changes.
+5. Graceful degradation when a source is missing or malformed.
 
-## 🌟 Project Overview
+## Visual System Snapshot
 
-Integrating multiple candidate data sources is a major challenge in modern recruitment platforms. The hard part is not reading files or APIs, but resolving **who wins when two sources disagree** on a field (e.g., different phone numbers or job titles) and doing so consistently and explainably.
+```mermaid
+flowchart LR
+    A[Structured Sources\nRecruiter CSV / ATS JSON] --> E[Extractor Layer]
+    B[Unstructured Sources\nGitHub Profile + Repos] --> E
+    E --> N[Normalization]
+    N --> M[Deterministic Merge Engine]
+    M --> C[Canonical Profile]
+    C --> P[Projection Layer\nCustom Config Optional]
+    P --> V[Validation]
+    V --> O[Final JSON Output]
 
-### Key Features
-* **Per-Field Confidence Priors**: Confidence is calculated *per field, per source* (e.g., recruiter CSV is authoritative for contact numbers, whereas GitHub is authoritative for technical skills) rather than a single average score per source.
-* **Deterministic Tie-Breaking**: Reconciles conflicts deterministically using strict confidence values and source priority fallbacks.
-* **Comprehensive Provenance**: Records every decision, capturing which sources provided which values, which values won, and which values were discarded or merged.
-* **Flexible Projection ("The Required Twist")**: Separates the internal canonical record from the custom output structure using a runtime configuration layer.
+    classDef source fill:#dbeafe,stroke:#1d4ed8,stroke-width:1px;
+    classDef logic fill:#dcfce7,stroke:#166534,stroke-width:1px;
+    classDef data fill:#fef3c7,stroke:#92400e,stroke-width:1px;
 
----
+    class A,B source;
+    class E,N,M,P,V logic;
+    class C,O data;
+```
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-* **Language**: [Python 3.9+](https://www.python.org/)
-* **Dependencies**: **None** (Built exclusively using the Python Standard Library to ensure zero-dependency overhead, high security, and easy auditability).
-* **Core Modules Used**:
-  * `csv`, `json`, `io`: For parsing input sources.
-  * `dataclasses`: For structuring typed schemas and data payloads.
-  * `re`, `unicodedata`: For text cleanup, email validation, phone and date normalization.
-  * `argparse`: For providing a CLI interface.
+| Area | Choice | Why This Choice |
+|---|---|---|
+| Language | Python 3.9+ | Fast iteration, excellent stdlib support |
+| Dependencies | Python standard library only | No install friction, deterministic behavior, easy audit |
+| CLI | argparse | Lightweight, built-in, clear execution surface |
+| Data parsing | csv, json, io | Reliable parsing for required source formats |
+| Modeling | dataclasses, enum | Typed and explicit canonical/internal data model |
+| Validation and normalization | re, unicodedata | Predictable formatting and schema checks |
+| Tests | built-in test module style | Zero extra framework overhead |
 
----
+## Workflow Explanation
 
-## 🔄 System Execution Flow
+The runtime workflow follows a strict sequence:
 
-The system runs a unidirectional pipeline: **Parse ➔ Extract ➔ Merge ➔ Project ➔ Validate ➔ Output**.
+1. Read candidate inputs from CLI arguments.
+2. Extract candidate field values from each source.
+3. Normalize values into canonical formats.
+4. Merge with deterministic conflict policies.
+5. Build a canonical profile as source of truth.
+6. Apply optional runtime projection config.
+7. Validate output shape and field constraints.
+8. Emit JSON to stdout or file.
+
+### Execution Sequence Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
-    participant PipelineWrapper as pipeline.py
-    participant Pipeline as candidate_transformer/pipeline.py
-    participant Extractors as candidate_transformer/extractors/
-    participant MergeEngine as candidate_transformer/core/merge.py
-    participant ProjectLayer as candidate_transformer/core/project.py
-    participant Validator as candidate_transformer/core/validate.py
+    participant CLI as pipeline.py
+    participant Orchestrator as candidate_transformer/pipeline.py
+    participant Extractors as extractor modules
+    participant Merge as core/merge.py
+    participant Project as core/project.py
+    participant Validate as core/validate.py
 
-    User->>PipelineWrapper: Exec CLI command (sources + config)
-    activate PipelineWrapper
-    PipelineWrapper->>Pipeline: main() / run_pipeline()
-    activate Pipeline
-    Pipeline->>Extractors: Extract raw sources (CSV, ATS JSON, GitHub)
-    activate Extractors
-    Extractors->>Pipeline: Return List[FieldValue]
-    deactivate Extractors
-    Pipeline->>MergeEngine: merge_sources(all_values)
-    activate MergeEngine
-    Note over MergeEngine: Reconcile conflicts using confidence priors & source tie-breakers
-    MergeEngine->>Pipeline: Return CanonicalProfile
-    deactivate MergeEngine
-    alt Custom Config Provided
-        Pipeline->>ProjectLayer: project(CanonicalProfile, custom_config)
-        activate ProjectLayer
-        ProjectLayer->>Pipeline: Return Projected Dictionary
-        deactivate ProjectLayer
-        Pipeline->>Validator: validate_custom_projection(Projected Dictionary)
-        activate Validator
-        Validator->>Pipeline: Return Errors List
-        deactivate Validator
-    else Default Run
-        Pipeline->>ProjectLayer: project_default_schema(CanonicalProfile)
-        activate ProjectLayer
-        ProjectLayer->>Pipeline: Return Default Dictionary
-        deactivate ProjectLayer
-        Pipeline->>Validator: validate_default_schema(Default Dictionary)
-        activate Validator
-        Validator->>Pipeline: Return Errors List
-        deactivate Validator
+    User->>CLI: Run command with source paths
+    CLI->>Orchestrator: run_pipeline(candidate_id, sources, config)
+    Orchestrator->>Extractors: Parse available sources
+    Extractors-->>Orchestrator: List[FieldValue]
+    Orchestrator->>Merge: merge_sources(candidate_id, values)
+    Merge-->>Orchestrator: CanonicalProfile
+    alt Custom config present
+        Orchestrator->>Project: project(canonical_dict, config)
+        Project-->>Orchestrator: Projected output
+        Orchestrator->>Validate: validate_custom_projection(...)
+    else Default output
+        Orchestrator->>Project: project_default_schema(canonical_dict)
+        Project-->>Orchestrator: Default output
+        Orchestrator->>Validate: validate_default_schema(...)
     end
-    Pipeline->>PipelineWrapper: Return JSON output
-    deactivate Pipeline
-    PipelineWrapper->>User: Output JSON (stdout or --out file)
-    deactivate PipelineWrapper
+    Validate-->>Orchestrator: Validation errors or none
+    Orchestrator-->>CLI: JSON result
+    CLI-->>User: Print or write output file
 ```
 
----
+### Merge Decision Flow
 
-## 📂 Code Structure & Organization
+```mermaid
+flowchart TD
+    S[Incoming FieldValue list] --> G{Field category}
+    G -->|Single value| SV[Pick highest confidence]
+    SV --> T{Tie?}
+    T -->|Yes| P[Apply static source priority]
+    T -->|No| W[Winner selected]
+    P --> W
 
-The codebase is organized into a clean, modular package structure to separate concerns and support scalability:
+    G -->|Multi value| MV[Union and deduplicate normalized values]
+    G -->|Skills| SK[Group by skill name, keep max confidence]
+    G -->|Experience| EX[Deduplicate by company plus title and keep richer entry]
 
-```bash
+    W --> PR[Write provenance]
+    MV --> PR
+    SK --> PR
+    EX --> PR
+    PR --> CP[Canonical profile]
+```
+
+## Code Structure and Folder Organization
+
+```text
 eightfold-transformer/
-├── README.md               # Visual landing page & quickstart
-├── architecture.md         # High-level architecture, design decisions & priors
-├── projectdocumentation.md  # Detailed module breakdown, flowcharts & integration specs
-├── pipeline.py             # Root-level CLI entry point wrapper
-├── Rama_Lokesh_Reddy_Penumallu_rlpreddy565@gmail.com_Eightfold.pdf # Technical Design Document (Step 1)
-
-
-
-├── candidate_transformer/  # Main package
-
-│   ├── __init__.py
-│   ├── pipeline.py         # Orchestrator logic (run_pipeline, CLI parser main)
-│   ├── core/               # Core merging and projection engine
-│   │   ├── __init__.py
-│   │   ├── schema.py       # Data structures, provenance models & confidence scores
-│   │   ├── merge.py        # Conflict resolution & confidence aggregation logic
-│   │   ├── project.py      # Configuration-driven projection engine
-│   │   └── validate.py     # Pre-output schema validation checks
-│   ├── extractors/         # Data source extractors (separated by concern)
-│   │   ├── __init__.py     # Exposes extractor functions
-│   │   ├── csv_extractor.py # Extract recruiter CSV data
-│   │   ├── ats_extractor.py # Extract ATS JSON data
-│   │   └── github_extractor.py # Extract GitHub API profile/repo data
-│   └── utils/              # Normalization and helper utilities
-│       ├── __init__.py
-│       └── normalize.py    # Field cleanups (emails, phones, dates, and skills)
-├── tests/                  # Test suite
-│   ├── __init__.py
-│   └── test_pipeline.py    # Core validation unit tests
-└── sample_inputs/          # Test data assets
-    ├── ats.json            # Mock ATS JSON export
-    ├── recruiter.csv       # Mock Recruiter CSV export
-    ├── github_profile.json # Mock GitHub API profile
-    ├── github_repos.json   # Mock GitHub repos JSON
-    └── custom_config.json  # Sample output projection config
+|-- README.md
+|-- architecture.md
+|-- projectdocumentation.md
+|-- pipeline.py
+|-- candidate_transformer/
+|   |-- __init__.py
+|   |-- pipeline.py
+|   |-- core/
+|   |   |-- __init__.py
+|   |   |-- schema.py
+|   |   |-- merge.py
+|   |   |-- project.py
+|   |   |-- validate.py
+|   |-- extractors/
+|   |   |-- __init__.py
+|   |   |-- csv_extractor.py
+|   |   |-- ats_extractor.py
+|   |   |-- github_extractor.py
+|   |-- utils/
+|       |-- __init__.py
+|       |-- normalize.py
+|-- sample_inputs/
+|   |-- recruiter.csv
+|   |-- ats.json
+|   |-- github_profile.json
+|   |-- github_repos.json
+|   |-- custom_config.json
+|   |-- output_default.json
+|   |-- output_custom_config.json
+|-- tests/
+    |-- __init__.py
+    |-- test_pipeline.py
 ```
 
----
-
-## 💻 Setup & Installation
-
-Since the project uses only the Python standard library, there are **no dependencies to install**. 
+## Setup and Installation
 
 ### Prerequisites
-* Python 3.9 or higher. Verify your installation with:
-  ```bash
-  python --version
-  # or
-  python3 --version
-  ```
 
-### Getting Started
-1. Clone or copy this repository to your local machine:
-   ```bash
-   git clone https://github.com/ramalokeshreddyp/Candidate-Data-Transformer.git
-   cd Candidate-Data-Transformer
-   ```
+1. Python 3.9 or newer.
+2. Access to the repository directory.
 
----
+### Local Setup
 
-## 🚀 How to Run
+```bash
+git clone <your-repo-url>
+cd eightfold-transformer
+python --version
+```
 
-The pipeline runs as a CLI tool via `pipeline.py`. 
+No package installation is required because the project uses only standard library modules.
 
-### 1. Default Schema Output
-Run the pipeline using the mock data provided in `sample_inputs/` to generate the default canonical profile structure:
+## Run Locally
+
+### Default canonical output
+
 ```bash
 python pipeline.py \
   --candidate-id cand_001 \
@@ -182,8 +190,8 @@ python pipeline.py \
   --github-repos sample_inputs/github_repos.json
 ```
 
-### 2. Custom Output Projection (The "Required Twist")
-To shape the output profile dynamically, supply a projection schema using the `--config` flag:
+### Custom output projection
+
 ```bash
 python pipeline.py \
   --candidate-id cand_001 \
@@ -193,46 +201,58 @@ python pipeline.py \
   --github-repos sample_inputs/github_repos.json \
   --config sample_inputs/custom_config.json
 ```
-This runs the same internal merge engine, but projects the final JSON structure into custom fields (e.g., mapping `emails[0]` to `primary_email`, filtering skills, and setting normalization rules on-the-fly) as defined by the configuration.
 
-### Saving Output to File
-Add the `--out <path>` argument to write the JSON results directly to a file:
+### Write output to file
+
 ```bash
 python pipeline.py \
   --candidate-id cand_001 \
   --recruiter-csv sample_inputs/recruiter.csv \
-  --out output.json
+  --ats-json sample_inputs/ats.json \
+  --github-profile sample_inputs/github_profile.json \
+  --github-repos sample_inputs/github_repos.json \
+  --out sample_inputs/output_default.json
 ```
 
----
+## Usage Instructions
 
-## 🧪 Running Tests
+CLI arguments:
 
-A suite of unit tests covers the critical parts of the pipeline's logic (conflict resolution, tie-breaking, schema validation, and normalization).
+- --candidate-id: Required identifier for the resulting profile.
+- --recruiter-csv: Path to recruiter CSV source.
+- --ats-json: Path to ATS JSON source.
+- --github-profile: Path to GitHub profile JSON source.
+- --github-repos: Path to GitHub repositories JSON source.
+- --config: Optional custom projection config.
+- --out: Optional output JSON file path.
 
-Run the tests directly as a Python module:
+Minimum source coverage in this implementation:
+
+1. Structured: Recruiter CSV and ATS JSON.
+2. Unstructured: GitHub profile plus repositories.
+
+## Validation and Testing
+
+Run test suite:
+
 ```bash
 python -m tests.test_pipeline
 ```
 
-All 8 tests are executed without needing external test frameworks:
-```text
-PASS: conflict resolution picks highest confidence, records loser
-PASS: ties resolved deterministically by source priority
-PASS: multi-value fields union correctly instead of picking one winner
-PASS: garbage CSV produces empty extraction, no crash, no invented data
-PASS: phone normalization handles common formats and rejects junk
-PASS: date normalization covers common formats, refuses to guess on garbage
-PASS: on_missing='error' surfaces missing required fields loudly
-PASS: GitHub-inferred skills are discounted relative to declared skills
+Current status:
 
-8/8 tests passed
-```
+1. 13 of 13 tests passing.
+2. Includes end-to-end tests for default schema and custom projection.
+3. Includes regression tests for E.164 config token handling and fixed links shape.
 
----
+## Documentation Map
 
-## 🔗 Project Documentation Links
+- architecture.md: high-level architecture, merge policy, confidence model, and trade-offs.
+- projectdocumentation.md: module-level implementation details, integration contracts, and execution internals.
 
-For deep dives into design, architecture, and code details, refer to:
-* **[architecture.md](file:///c:/Users/lokes/Desktop/eightfold-transformer/architecture.md)**: Explore the architectural principles, confidence scoring matrices, and the philosophy behind separating internal canonical records from outputs.
-* **[projectdocumentation.md](file:///c:/Users/lokes/Desktop/eightfold-transformer/projectdocumentation.md)**: Explore package module descriptions, code level workflows, data flow diagrams, trade-off evaluations, and integration guidelines for new sources.
+## Assignment Artifacts
+
+1. One-page design PDF for Step 1.
+2. Runnable codebase for Step 2.
+3. Sample outputs in sample_inputs/output_default.json and sample_inputs/output_custom_config.json.
+4. Automated tests in tests/test_pipeline.py.

@@ -88,6 +88,32 @@ def test_custom_projection_respects_on_missing_error():
     print("PASS: on_missing='error' surfaces missing required fields loudly")
 
 
+def test_custom_projection_accepts_e164_with_dot_notation():
+    canonical = {
+        "phones": ["09876543210"],
+        "overall_confidence": 0.5,
+        "provenance": [],
+    }
+    config = {
+        "fields": [
+            {"path": "phone", "from": "phones[0]", "type": "string", "normalize": "E.164"}
+        ],
+        "on_missing": "null",
+    }
+    projected = project(canonical, config)
+    assert projected["phone"] == "+919876543210"
+    print("PASS: custom projection accepts E.164 normalize token")
+
+
+def test_default_projection_has_fixed_links_shape():
+    projected = project_default_schema({"candidate_id": "c1", "links": {"github": "https://github.com/x"}})
+    links = projected["links"]
+    assert set(links.keys()) == {"linkedin", "github", "portfolio", "other"}
+    assert links["github"] == "https://github.com/x"
+    assert links["other"] == []
+    print("PASS: default projection emits fixed links shape")
+
+
 def test_github_skills_get_lower_confidence_than_declared_skills():
     """Inferred skills (from repo language stats) should never outrank a
     skill the candidate explicitly declared — this is a deliberate design

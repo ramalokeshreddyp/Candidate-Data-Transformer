@@ -1,176 +1,273 @@
-# 📄 Complete Project Documentation
+# Complete Project Documentation
 
-This document serves as the technical reference manual for the **Multi-Source Candidate Data Transformer**. It provides details on module structure, field-by-field workflows, integration procedures, and codebase execution.
+This document is the implementation-level technical reference for the Multi-Source Candidate Data Transformer.
+It explains modules, responsibilities, integration contracts, execution flow, and practical extension patterns.
 
----
+## Main Idea and Objective
 
-## 🎯 Project Objective
+The project transforms fragmented candidate data into one reliable profile by applying:
 
-In candidate recruitment platforms, candidate profile data comes from multiple sources: resume parsing engines, online profiles (e.g., GitHub, LinkedIn), and manual entry via Applicant Tracking Systems (ATS) or recruiter spreadsheets. 
+1. Source-aware extraction.
+2. Deterministic normalization and conflict resolution.
+3. Provenance and confidence tracking.
+4. Configurable output projection.
 
-This project resolves the conflicts arising from inconsistent schemas, stale information, spelling variations, and differing formatting standards. It ingests disparate datasets and outputs a clean, consolidated profile with a clear, auditable trail explaining the origin and trustworthiness of every single field.
-
----
-
-## 📦 System Modules & Codebase Breakdown
-
-The project follows a modular, package-oriented architecture under the `candidate_transformer` package:
-
-### 1. Root CLI Entrypoint
-* **[pipeline.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/pipeline.py)**: A lightweight wrapper script that imports and executes the pipeline's CLI.
-  ```python
-  from candidate_transformer.pipeline import main
-  if __name__ == "__main__":
-      main()
-  ```
-
-### 2. Orchestration Package Module
-* **[candidate_transformer/pipeline.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/pipeline.py)**: The actual orchestrator logic. Handles parsing command line arguments, wrapping extraction steps in defensive checks, and running merging, projection, and validation in sequence.
-  * `run_pipeline(candidate_id, sources, custom_config)`: Runs extraction, merging, optional projection, and validation.
-  * `main()`: Resolves files on disk from CLI args and writes results to stdout/file.
-
-### 3. Core Merging & Projection Engine
-* **[candidate_transformer/core/schema.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/schema.py)**: Defines all data transfer objects (DTOs) and configuration priors.
-  * `SourceType(Enum)`: Restricts supported source types.
-  * `ProvenanceEntry(dataclass)`: Model tracking the history of a single field.
-  * `FieldValue(dataclass)`: Wraps an extracted data point before merge.
-  * `CanonicalProfile(dataclass)`: Post-merge unified candidate record.
-  * `FIELD_SOURCE_PRIORS`: Dict storing standard confidence values for fields per source.
-* **[candidate_transformer/core/merge.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/merge.py)**: Reconciles all extracted `FieldValue` records into a single `CanonicalProfile`.
-  * `merge_sources(candidate_id, all_values)`: Coordinates the merge logic field-by-field.
-  * `_pick_winner(candidates)`: Uses confidence priors and source priority to break ties.
-  * `_merge_skills(values, profile)`: Unions skills, retaining max confidence and verifying sources.
-  * `_merge_experience(values, profile)`: Merges job experiences, deduplicating by company and title (wins based on details richness).
-* **[candidate_transformer/core/project.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/project.py)**: Dynamic projection engine. Evaluates dotted/bracketed paths (e.g., `emails[0]`, `skills[].name`) against the merged record and applies post-processing.
-* **[candidate_transformer/core/validate.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/validate.py)**: Run before output to check data types, E.164 phone correctness, and validation rules.
-
-### 4. Extraction Module Package
-* **[candidate_transformer/extractors/](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/extractors/)**: Subpackage containing parsers that translate raw data into `FieldValue` structures.
-  * **[csv_extractor.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/extractors/csv_extractor.py)**: Standard recruiter CSV parser.
-  * **[ats_extractor.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/extractors/ats_extractor.py)**: Translates ATS JSON fields into canonical paths.
-  * **[github_extractor.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/extractors/github_extractor.py)**: Parses GitHub profiles and infers skills from repo languages.
-  * **[__init__.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/extractors/__init__.py)**: Exposes the three extractors as a public subpackage interface.
-
-### 5. Utility Helper Engine
-* **[candidate_transformer/utils/normalize.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/utils/normalize.py)**: Text cleanup, email regex checks, skill canonicalization alias maps, and date normalizers.
-
----
-
-## 🔄 Detailed Data Flow & Decision Tree
-
-The diagram below details the exact lifecycle of a field value, from raw file extraction to the final consolidated profile entry.
+## End-to-End Workflow
 
 ```mermaid
-graph TD
-    A[Start Source Extraction] --> B[Parse Raw Record]
-    B --> C{Field Present?}
-    C -->|No| D[Ignore Field]
-    C -->|Yes| E[Apply Normalizer - utils/normalize.py]
-    E --> F{Valid Normalized Format?}
-    F -->|No| G[Degrade Value to Null]
-    F -->|Yes| H[Instantiate FieldValue]
-    H --> I[Assign confidence from priors / discounts]
-    I --> J[Emit FieldValue list]
-    J --> K[Merge Engine - core/merge.py]
-    K --> L{Field Type?}
-    L -->|Single-Value| M{Higher Confidence Wins?}
-    M -->|Yes| N[Assign to Canonical Profile]
-    M -->|No/Tie| O[Tie-breaker: Source priority order]
-    O --> N
-    L -->|Multi-Value| P[Union and de-duplicate lists]
-    P --> N
-    L -->|Experience| Q[Deduplicate on company + title]
-    Q --> R{Which record has more non-null fields?}
-    R -->|Rich Record| S[Keep Rich Record]
-    R -->|Lean Record| T[Discard / Log in Provenance]
-    S --> N
-    N --> U[Write Winner to Profile & Log Discarded to Provenance]
+flowchart TD
+    A[CLI Inputs] --> B[Load Source Data]
+    B --> C[Extractor Layer]
+    C --> D[Normalize and Tag Values]
+    D --> E[Merge Engine]
+    E --> F[Canonical Profile]
+    F --> G[Projection Layer]
+    G --> H[Validation]
+    H --> I[Final JSON]
 ```
 
----
+## Repository Structure
 
-## ⚖️ Evaluation: Pros, Cons, & Trade-offs
-
-Here is a transparent breakdown of the current implementation's engineering design trade-offs:
-
-### Advantages & Pros
-* **Highly Modular**: Splitting extractors, core merging, utility cleaners, and CLI runners into package folders prevents tight coupling and makes scaling clean.
-* **Traceable**: Detailed provenance logging (`provenance` key) lets upstream applications see exactly *why* a particular piece of candidate info won.
-* **Zero Dependencies**: Uses only standard Python libraries, making it run in milliseconds with zero setup overhead and a minimal memory footprint.
-
-### Disadvantages & Cons
-* **Basic Text Processing**: The normalization patterns rely on simple regex checks. In a production system, complex global phone parsing would require a library like Google's `libphonenumber`, and skill matching would benefit from a vector database or semantic taxonomy.
-* **Simplified Date Parsing**: The date normalize method handles standard formats like `Jan 2022` or `2022` but would struggle with complex natural-language strings (e.g., "three years ago", "Present").
-* **Single-Node Execution**: The current design merges data in memory. Scaling this to process millions of candidates simultaneously would require porting the merge rules to distributed engines (e.g., Apache Spark or dbt/SQL pipelines).
-
----
-
-## 🛠️ Developer Integration Guide: Adding a New Data Source
-
-To extend the system and add a new input source (e.g., a LinkedIn PDF profile or a Resume Parser output):
-
-### Step 1: Register the Source Type
-Add your new source identifier to the `SourceType` enum in **[schema.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/schema.py)**:
-```python
-class SourceType(str, Enum):
-    # ... existing sources
-    LINKEDIN_PDF = "linkedin_pdf"
+```text
+eightfold-transformer/
+|-- pipeline.py
+|-- README.md
+|-- architecture.md
+|-- projectdocumentation.md
+|-- candidate_transformer/
+|   |-- pipeline.py
+|   |-- core/
+|   |   |-- schema.py
+|   |   |-- merge.py
+|   |   |-- project.py
+|   |   |-- validate.py
+|   |-- extractors/
+|   |   |-- csv_extractor.py
+|   |   |-- ats_extractor.py
+|   |   |-- github_extractor.py
+|   |-- utils/
+|       |-- normalize.py
+|-- sample_inputs/
+|-- tests/
 ```
 
-### Step 2: Define Base Confidence Priors
-In **[schema.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/core/schema.py)**, add appropriate confidence values for your fields in the `FIELD_SOURCE_PRIORS` dictionary:
-```python
-FIELD_SOURCE_PRIORS = {
-    "full_name":        {"recruiter_csv": 0.85, "linkedin_pdf": 0.90, ...},
-    "emails":           {"recruiter_csv": 0.90, "linkedin_pdf": 0.80, ...},
-    # ...
-}
+## Module Responsibilities
+
+### Root entry point
+
+pipeline.py:
+
+1. Minimal wrapper that delegates execution to package orchestrator.
+
+### Orchestration layer
+
+candidate_transformer/pipeline.py:
+
+1. Parses CLI arguments.
+2. Loads source files.
+3. Invokes extractors with defensive error handling.
+4. Executes merge, projection, and validation.
+5. Emits JSON to stdout or output path.
+
+### Core schema and confidence model
+
+candidate_transformer/core/schema.py:
+
+1. Defines source enum, FieldValue, ProvenanceEntry, CanonicalProfile.
+2. Stores field-source confidence priors.
+3. Exposes base confidence lookup.
+
+### Merge engine
+
+candidate_transformer/core/merge.py:
+
+1. Groups extracted values by field.
+2. Applies deterministic winner selection.
+3. Handles list-union fields, skills aggregation, and experience deduplication.
+4. Computes overall confidence.
+5. Appends provenance for selected and discarded values.
+
+### Projection layer
+
+candidate_transformer/core/project.py:
+
+1. Maps canonical fields into runtime-defined output fields.
+2. Supports path expressions such as emails[0] and skills[].name.
+3. Applies optional per-field normalization.
+4. Supports on_missing policy: null, omit, error.
+
+### Validation layer
+
+candidate_transformer/core/validate.py:
+
+1. Validates default schema output types and formats.
+2. Validates custom projection required fields.
+3. Surfaces schema issues without crashing core merge logic.
+
+### Extractor layer
+
+candidate_transformer/extractors:
+
+1. csv_extractor.py for structured recruiter CSV.
+2. ats_extractor.py for semi-structured ATS JSON.
+3. github_extractor.py for unstructured GitHub profile and repository language evidence.
+
+### Utilities
+
+candidate_transformer/utils/normalize.py:
+
+1. Phone normalization to E.164 style.
+2. Email normalization and validation.
+3. Skill canonicalization.
+4. Date normalization to YYYY-MM.
+5. Text cleaning.
+
+## System Architecture Diagram
+
+```mermaid
+graph LR
+    subgraph Sources
+        A[Recruiter CSV]
+        B[ATS JSON]
+        C[GitHub Profile]
+        D[GitHub Repos]
+    end
+
+    subgraph Engine
+        E[Extractors]
+        F[Normalizer]
+        G[Merge Engine]
+        H[Canonical Profile]
+        I[Projection]
+        J[Validation]
+    end
+
+    A --> E
+    B --> E
+    C --> E
+    D --> E
+    E --> F --> G --> H --> I --> J
+    K[Output Config] --> I
+    J --> L[JSON Output]
 ```
 
-### Step 3: Implement the Extractor
-Create a new extractor parser module file under **[candidate_transformer/extractors/](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/extractors/)**, e.g., `linkedin_extractor.py`. The parser must accept raw input and return `FieldValue` items:
-```python
-from typing import List
-from ..core.schema import FieldValue, SourceType, base_confidence
-from ..utils.normalize import normalize_email, clean_text
+## Data Flow and Execution Internals
 
-def extract_linkedin_pdf(pdf_parsed_dict: dict) -> List[FieldValue]:
-    out = []
-    name = clean_text(pdf_parsed_dict.get("name", ""))
-    email = normalize_email(pdf_parsed_dict.get("email", ""))
-    
-    if name:
-        out.append(FieldValue(
-            field_name="full_name",
-            value=name,
-            source=SourceType.LINKEDIN_PDF,
-            method="direct",
-            confidence=base_confidence("full_name", "linkedin_pdf")
-        ))
-    if email:
-        out.append(FieldValue(
-            field_name="emails",
-            value=email,
-            source=SourceType.LINKEDIN_PDF,
-            method="direct",
-            confidence=base_confidence("emails", "linkedin_pdf")
-        ))
-    return out
+### Extraction contract
+
+Each extractor returns a list of FieldValue objects:
+
+1. field_name
+2. value
+3. source
+4. method
+5. confidence
+
+This creates a common representation before merge.
+
+### Merge contract
+
+Input: List of FieldValue.
+
+Output: CanonicalProfile with provenance and overall_confidence.
+
+### Projection contract
+
+Input:
+
+1. Canonical profile as dict.
+2. Optional custom config.
+
+Output: Projected dict for downstream consumers.
+
+### Validation contract
+
+Input: output dict.
+
+Output: list of validation errors.
+
+## Execution Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant CLI
+    participant Pipeline
+    participant Extractors
+    participant Merge
+    participant Project
+    participant Validate
+
+    User->>CLI: Execute with sources and optional config
+    CLI->>Pipeline: Build source payloads
+    Pipeline->>Extractors: Extract values per source
+    Extractors-->>Pipeline: FieldValue list
+    Pipeline->>Merge: Merge to canonical profile
+    Merge-->>Pipeline: Canonical profile
+    Pipeline->>Project: Project default or custom output
+    Project-->>Pipeline: Output payload
+    Pipeline->>Validate: Validate payload
+    Validate-->>Pipeline: Errors or success
+    Pipeline-->>CLI: JSON response
 ```
 
-### Step 4: Expose and Wire the Extractor
-Expose your new extractor function in **[candidate_transformer/extractors/__init__.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/extractors/__init__.py)**:
-```python
-from .linkedin_extractor import extract_linkedin_pdf
-```
-Then, update `run_pipeline` in **[candidate_transformer/pipeline.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/candidate_transformer/pipeline.py)** to include your new extractor within a protective try-except block:
-```python
-    try:
-        if sources.get("linkedin_pdf"):
-            all_values.extend(extract_linkedin_pdf(sources["linkedin_pdf"]))
-    except Exception as e:
-        print(f"[warn] linkedin_pdf extraction failed, skipping: {e}")
-```
+## Problem-Solving Approach
 
-### Step 5: Add a Unit Test
-Add a test function in **[tests/test_pipeline.py](file:///c:/Users/lokes/Desktop/eightfold-transformer/tests/test_pipeline.py)** to verify that your parser, confidence priors, and merge rules work as intended.
+1. Convert all source-specific structures into a shared intermediate representation.
+2. Normalize early to reduce duplicate and conflict noise.
+3. Keep merge logic deterministic and policy-driven.
+4. Keep output projection independent from merge internals.
+5. Always preserve explainability through provenance.
+
+## Tech Stack and Why It Was Chosen
+
+1. Python 3.9+: readable and fast for assignment-scale data transformations.
+2. Standard library only: zero dependency risk and simple execution environment.
+3. argparse-based CLI: low overhead and reproducible local runs.
+
+## Crucial Components and Integration Details
+
+1. Field-source priors in schema.py influence conflict winner quality.
+2. SOURCE_PRIORITY in merge.py guarantees deterministic tie outcomes.
+3. Path evaluator in project.py enables runtime schema flexibility.
+4. Validators ensure malformed outputs are surfaced before downstream usage.
+
+## Pros and Cons
+
+### Pros
+
+1. Deterministic and explainable results.
+2. Strong traceability through provenance entries.
+3. Clean modular boundaries for extension.
+4. Easy local run with no dependency installation.
+
+### Cons
+
+1. Heuristic normalization for global data diversity is limited.
+2. Skill canonicalization map is intentionally small and curated.
+3. Not yet optimized for distributed high-throughput pipelines.
+
+## Integration Guide: Adding a New Source
+
+1. Add source enum in core/schema.py.
+2. Add field-source priors in FIELD_SOURCE_PRIORS.
+3. Implement extractor in candidate_transformer/extractors.
+4. Export function in extractors/__init__.py.
+5. Wire extractor call inside run_pipeline.
+6. Add tests for extraction and merge behavior.
+
+## Validation and Quality Gates
+
+Current quality coverage includes:
+
+1. Conflict resolution behavior.
+2. Deterministic tie breaking.
+3. Multi-value union semantics.
+4. Normalization checks for phone and dates.
+5. Projection on_missing policy behavior.
+6. End-to-end execution for default and custom output.
+
+## Summary
+
+This implementation delivers a complete and explainable candidate transformation pipeline with robust structure, deterministic behavior, rich traceability, and configurable output projection suited for the assignment requirements.

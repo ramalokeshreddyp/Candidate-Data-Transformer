@@ -10,11 +10,21 @@
   ],
   "location": null,
   "links": {
-    "github": "https://github.com/ashaverma-dev"
+    "linkedin": null,
+    "github": "https://github.com/ashaverma-dev",
+    "portfolio": null,
+    "other": []
   },
   "headline": "Backend engineer. Python, distributed systems, occasionally Rust.",
   "years_experience": null,
   "skills": [
+    {
+      "name": "Python",
+      "confidence": 0.7,
+      "sources": [
+        "github"
+      ]
+    },
     {
       "name": "Go",
       "confidence": 0.7,
@@ -24,13 +34,6 @@
     },
     {
       "name": "JavaScript",
-      "confidence": 0.7,
-      "sources": [
-        "github"
-      ]
-    },
-    {
-      "name": "Python",
       "confidence": 0.7,
       "sources": [
         "github"

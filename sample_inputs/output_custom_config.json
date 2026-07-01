@@ -3,9 +3,9 @@
   "primary_email": "asha.verma@gmail.com",
   "phone": "+919876543210",
   "skills": [
-    "JavaScript",
     "Go",
-    "Python"
+    "Python",
+    "JavaScript"
   ],
   "overall_confidence": 0.736,
   "provenance": [
